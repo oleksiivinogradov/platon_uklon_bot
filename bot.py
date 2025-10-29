@@ -14,11 +14,79 @@ BOT_TOKEN = os.getenv('BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE')
 # Хранилище языков пользователей
 user_languages = {}
 
+# Обязательные каналы для подписки
+REQUIRED_CHANNELS = [
+    {'username': '@Mollysantana', 'name': 'Mollysantana'}
+]
+
+
+async def check_subscription(user_id: int, bot) -> bool:
+    """Проверка подписки на обязательные каналы"""
+    for channel in REQUIRED_CHANNELS:
+        try:
+            member = await bot.get_chat_member(chat_id=channel['username'], user_id=user_id)
+            # Проверяем статус подписки
+            if member.status in ['left', 'kicked']:
+                return False
+        except Exception as e:
+            print(f"Ошибка проверки подписки на {channel['username']}: {e}")
+            # Если не можем проверить, пропускаем (например, канал приватный или не существует)
+            continue
+    return True
+
+
+async def show_subscription_request(update: Update, lang: str):
+    """Показать запрос на подписку с меню"""
+    keyboard = []
+    
+    # Добавляем кнопку для канала
+    for channel in REQUIRED_CHANNELS:
+        keyboard.append([InlineKeyboardButton(
+            f"📢 Подписаться на {channel['name']}", 
+            url=f"https://t.me/{channel['username'].replace('@', '')}"
+        )])
+    
+    # Добавляем кнопку проверки
+    keyboard.append([InlineKeyboardButton("✅ Я подписался!", callback_data='check_sub')])
+    
+    # Добавляем меню с информацией о боте
+    keyboard.append([InlineKeyboardButton("ℹ️ О боте", callback_data='about_locked')])
+    keyboard.append([InlineKeyboardButton("❓ Зачем подписка?", callback_data='why_sub')])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    message_text = (
+        "╔═══════════════════════════════════╗\n"
+        "║  🤖 Добро пожаловать в Sigma Bot! ║\n"
+        "╚═══════════════════════════════════╝\n\n"
+        "🔒 Для доступа к функциям бота подпишись на канал:\n\n"
+        f"📢 {REQUIRED_CHANNELS[0]['name']}\n"
+        f"   {REQUIRED_CHANNELS[0]['username']}\n\n"
+        "🎁 Что ты получишь:\n"
+        "• 💎 100 цитат великих людей\n"
+        "• 🎨 100+ AI изображений\n"
+        "• 🎧 ASMR видео с прогресс-баром\n"
+        "• 🍎 AI нарезка фруктов\n"
+        "• 📥 Скачивание видео с YouTube/TikTok\n"
+        "• 🌍 12 языков\n"
+        "• ⏱️ Выбор длительности видео\n\n"
+        "👇 Нажми на кнопку ниже, подпишись и возвращайся!"
+    )
+    
+    await update.message.reply_text(message_text, reply_markup=reply_markup)
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /start"""
     user_id = update.effective_user.id
     lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
+    
+    # Проверяем подписку на каналы
+    is_subscribed = await check_subscription(user_id, context.bot)
+    
+    if not is_subscribed:
+        await show_subscription_request(update, lang)
+        return
     
     # Создаем клавиатуру с кнопками на выбранном языке
     keyboard = [
@@ -100,7 +168,7 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Обновляем версию в about для каждого языка
     about_base = get_text(lang, 'about')
     # Заменяем версию на актуальную
-    about_text = about_base.replace('2.5.0', '2.6.0').replace('2.4.0', '2.6.0')
+    about_text = about_base.replace('2.5.0', '2.7.0').replace('2.4.0', '2.7.0').replace('2.6.0', '2.7.0')
     await update.message.reply_text(about_text)
 
 
@@ -110,6 +178,62 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     user_id = query.from_user.id
+    
+    # Обработка проверки подписки
+    if query.data == 'check_sub':
+        is_subscribed = await check_subscription(user_id, query.bot)
+        
+        if is_subscribed:
+            await query.edit_message_text(
+                text='✅ Отлично! Подписка подтверждена!\n\n'
+                     '🎉 Теперь тебе доступны все функции бота!\n\n'
+                     '📋 Используй /start для начала работы'
+            )
+            # Показываем клавиатуру
+            lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
+            keyboard = [
+                [get_text(lang, 'button_sigma'), get_text(lang, 'button_motivation')],
+                [get_text(lang, 'button_stats'), get_text(lang, 'button_help')],
+                [get_text(lang, 'button_quote'), get_text(lang, 'button_ai_image')],
+                [get_text(lang, 'button_asmr'), get_text(lang, 'button_ai_fruits')],
+                [get_text(lang, 'button_download')],
+                [get_text(lang, 'button_language')]
+            ]
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            await query.message.reply_text(
+                '😎 Добро пожаловать в Sigma Bot!\n\n'
+                'Используй кнопки ниже для навигации 👇',
+                reply_markup=reply_markup
+            )
+        else:
+            await query.answer(
+                '❌ Подписка не найдена!\n\n'
+                'Подпишись на канал @Mollysantana и попробуй снова.',
+                show_alert=True
+            )
+        return
+    
+    # Обработка кнопки "О боте" (для неподписанных)
+    if query.data == 'about_locked':
+        await query.answer(
+            '🤖 Sigma Bot v2.7.0\n\n'
+            '100 цитат, AI изображения, ASMR видео, нарезка фруктов, скачивание видео!\n\n'
+            'Подпишись на канал для доступа!',
+            show_alert=True
+        )
+        return
+    
+    # Обработка кнопки "Зачем подписка?"
+    if query.data == 'why_sub':
+        await query.answer(
+            '📢 Зачем подписка?\n\n'
+            '• Поддержка разработчика\n'
+            '• Новости и обновления\n'
+            '• Эксклюзивный контент\n'
+            '• Бесплатный доступ к боту!',
+            show_alert=True
+        )
+        return
     
     # Обработка выбора языка
     if query.data.startswith('lang_'):
@@ -300,6 +424,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_id = update.effective_user.id
     lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
+    
+    # Проверяем подписку перед выполнением команд
+    is_subscribed = await check_subscription(user_id, context.bot)
+    if not is_subscribed:
+        await show_subscription_request(update, lang)
+        return
     
     # Обработка кнопок клавиатуры (мультиязычно)
     if text in ['🎯 Сигма режим', '🎯 Sigma Mode', '🎯 Сігма режим']:
