@@ -1,0 +1,16 @@
+[Unit]
+Description=Platon Sigma Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/platon_uklon_bot
+Environment="PATH=/root/platon_uklon_bot/venv/bin"
+ExecStart=/root/platon_uklon_bot/venv/bin/python /root/platon_uklon_bot/bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
