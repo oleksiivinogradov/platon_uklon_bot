@@ -48,7 +48,7 @@ async def show_subscription_request(update: Update, lang: str):
     """Показать запрос на подписку с простым меню"""
     keyboard = []
     
-    # Добавляем кнопку для канала
+    # Добавляем кнопку для канала (СВЕРХУ)
     for channel in REQUIRED_CHANNELS:
         keyboard.append([InlineKeyboardButton(
             f"📢 {channel['name']}", 
@@ -63,7 +63,8 @@ async def show_subscription_request(update: Update, lang: str):
     message_text = (
         "🔒 Для использования бота подпишись на канал:\n\n"
         f"📢 {REQUIRED_CHANNELS[0]['username']}\n\n"
-        "👇 Нажми на канал выше, подпишись и нажми «Проверить подписку»"
+        "⚠️ БЕЗ ПОДПИСКИ БОТ НЕ РАБОТАЕТ!\n\n"
+        "👇 Нажми на кнопку канала, подпишись и вернись для проверки"
     )
     
     await update.message.reply_text(message_text, reply_markup=reply_markup)
@@ -264,17 +265,31 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     show_alert=True
                 )
         except Exception as e:
-            print(f"❌ Ошибка проверки: {e}")
+            error_msg = str(e)
+            print(f"❌ Ошибка проверки: {error_msg}")
+            
             # Показываем подробную ошибку пользователю
-            await query.answer(
-                f'⚠️ Не удалось проверить подписку!\n\n'
-                f'Возможные причины:\n'
-                f'• Канал не существует\n'
-                f'• Бот не админ канала\n'
-                f'• Канал приватный\n\n'
-                f'Свяжись с администратором!',
-                show_alert=True
-            )
+            if 'not found' in error_msg.lower() or 'chat not found' in error_msg.lower():
+                await query.answer(
+                    '⚠️ Канал @Mollysantana_Killaz не найден!\n\n'
+                    'Проверь что канал существует.\n'
+                    'Свяжись с администратором бота!',
+                    show_alert=True
+                )
+            elif 'not a member' in error_msg.lower() or 'admin' in error_msg.lower():
+                await query.answer(
+                    '⚠️ Бот не админ канала!\n\n'
+                    'Добавь бота администратором канала @Mollysantana_Killaz\n'
+                    'с правами "See Members"!',
+                    show_alert=True
+                )
+            else:
+                await query.answer(
+                    f'⚠️ Ошибка проверки подписки!\n\n'
+                    f'Детали: {error_msg}\n\n'
+                    'Добавь бота админом канала!',
+                    show_alert=True
+                )
         return
     
     # Обработка выбора языка
