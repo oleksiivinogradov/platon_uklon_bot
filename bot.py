@@ -16,7 +16,7 @@ user_languages = {}
 
 # Обязательные каналы для подписки
 REQUIRED_CHANNELS = [
-    {'username': '@Mollysantana', 'name': 'Mollysantana'}
+    {'username': '@Mollysantana_Killaz', 'name': 'Mollysantana Killaz'}
 ]
 
 
@@ -111,7 +111,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         f"{get_text(lang, 'welcome')}\n\n"
         f"🤖 Версия: 2.7.0\n"
-        f"📢 Канал: @Mollysantana"
+        f"📢 Канал: @Mollysantana_Killaz"
     )
     
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
@@ -221,7 +221,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await query.answer(
                 '❌ Подписка не найдена!\n\n'
-                'Подпишись на канал @Mollysantana и попробуй снова.',
+                'Подпишись на канал @Mollysantana_Killaz и попробуй снова.',
                 show_alert=True
             )
         return
