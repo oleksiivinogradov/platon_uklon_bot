@@ -218,34 +218,61 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Обработка проверки подписки
     if query.data == 'check_sub':
-        is_subscribed = await check_subscription(user_id, query.bot)
-        
-        if is_subscribed:
-            await query.edit_message_text(
-                text='✅ Отлично! Подписка подтверждена!\n\n'
-                     '🎉 Теперь тебе доступны все функции бота!\n\n'
-                     '📋 Отправь /start для начала работы'
-            )
-            # Показываем клавиатуру
-            lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
-            keyboard = [
-                [get_text(lang, 'button_sigma'), get_text(lang, 'button_motivation')],
-                [get_text(lang, 'button_stats'), get_text(lang, 'button_help')],
-                [get_text(lang, 'button_quote'), get_text(lang, 'button_ai_image')],
-                [get_text(lang, 'button_asmr'), get_text(lang, 'button_ai_fruits')],
-                [get_text(lang, 'button_download')],
-                [get_text(lang, 'button_language')]
-            ]
-            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            await query.message.reply_text(
-                '😎 Добро пожаловать в Sigma Bot!\n\n'
-                'Используй кнопки ниже для навигации 👇',
-                reply_markup=reply_markup
-            )
-        else:
+        # Подробная проверка с логированием
+        channel = REQUIRED_CHANNELS[0]
+        try:
+            print(f"🔍 Проверяю подписку пользователя {user_id} на {channel['username']}")
+            member = await query.bot.get_chat_member(chat_id=channel['username'], user_id=user_id)
+            print(f"📊 Статус пользователя: {member.status}")
+            
+            # Проверяем статус подписки
+            if member.status in ['member', 'creator', 'administrator']:
+                # ПОДПИСАН!
+                await query.edit_message_text(
+                    text='✅ Отлично! Подписка подтверждена!\n\n'
+                         '🎉 Теперь тебе доступны все функции бота!\n\n'
+                         '📋 Отправь /start для начала работы'
+                )
+                # Показываем клавиатуру
+                lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
+                keyboard = [
+                    [get_text(lang, 'button_sigma'), get_text(lang, 'button_motivation')],
+                    [get_text(lang, 'button_stats'), get_text(lang, 'button_help')],
+                    [get_text(lang, 'button_quote'), get_text(lang, 'button_ai_image')],
+                    [get_text(lang, 'button_asmr'), get_text(lang, 'button_ai_fruits')],
+                    [get_text(lang, 'button_download')],
+                    [get_text(lang, 'button_language')]
+                ]
+                reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+                await query.message.reply_text(
+                    '😎 Добро пожаловать в Sigma Bot!\n\n'
+                    'Используй кнопки ниже для навигации 👇',
+                    reply_markup=reply_markup
+                )
+            elif member.status in ['left', 'kicked']:
+                # НЕ ПОДПИСАН
+                await query.answer(
+                    '🔒 Подписка не найдена!\n\n'
+                    'Подпишись на канал и попробуй снова.',
+                    show_alert=True
+                )
+            else:
+                # Другой статус (restricted и т.д.)
+                await query.answer(
+                    f'⚠️ Статус: {member.status}\n\n'
+                    'Подпишись на канал полностью.',
+                    show_alert=True
+                )
+        except Exception as e:
+            print(f"❌ Ошибка проверки: {e}")
+            # Показываем подробную ошибку пользователю
             await query.answer(
-                '🔒 Подписка не найдена!\n\n'
-                'Подпишись на @Mollysantana_Killaz и попробуй снова.',
+                f'⚠️ Не удалось проверить подписку!\n\n'
+                f'Возможные причины:\n'
+                f'• Канал не существует\n'
+                f'• Бот не админ канала\n'
+                f'• Канал приватный\n\n'
+                f'Свяжись с администратором!',
                 show_alert=True
             )
         return
