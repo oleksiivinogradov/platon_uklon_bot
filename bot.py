@@ -121,12 +121,28 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /help"""
     user_id = update.effective_user.id
     lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
+    
+    # Проверяем подписку
+    is_subscribed = await check_subscription(user_id, context.bot)
+    if not is_subscribed:
+        await show_subscription_request(update, lang)
+        return
+    
     help_text = get_text(lang, 'help')
     await update.message.reply_text(help_text)
 
 
 async def language_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /language - выбор языка"""
+    user_id = update.effective_user.id
+    lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
+    
+    # Проверяем подписку
+    is_subscribed = await check_subscription(user_id, context.bot)
+    if not is_subscribed:
+        await show_subscription_request(update, lang)
+        return
+    
     keyboard = [
         [InlineKeyboardButton("🇷🇺 Русский", callback_data='lang_ru'),
          InlineKeyboardButton("🇬🇧 English", callback_data='lang_en')],
@@ -155,6 +171,12 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
     
+    # Проверяем подписку
+    is_subscribed = await check_subscription(user_id, context.bot)
+    if not is_subscribed:
+        await show_subscription_request(update, lang)
+        return
+    
     keyboard = [
         [InlineKeyboardButton("😎 Сигма мод", callback_data='sigma')],
         [InlineKeyboardButton("💪 Мотивация", callback_data='motivation')],
@@ -178,6 +200,12 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
     
+    # Проверяем подписку
+    is_subscribed = await check_subscription(user_id, context.bot)
+    if not is_subscribed:
+        await show_subscription_request(update, lang)
+        return
+    
     # Обновляем версию в about для каждого языка
     about_base = get_text(lang, 'about')
     # Заменяем версию на актуальную
@@ -191,6 +219,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     user_id = query.from_user.id
+    lang = user_languages.get(user_id, DEFAULT_LANGUAGE)
+    
+    # Разрешенные callback для неподписанных (только связанные с подпиской)
+    allowed_callbacks = ['check_sub', 'about_locked', 'why_sub']
+    
+    # Если это не callback подписки - проверяем подписку
+    if query.data not in allowed_callbacks:
+        is_subscribed = await check_subscription(user_id, query.bot)
+        if not is_subscribed:
+            await query.answer(
+                '❌ Сначала подпишись на канал @Mollysantana_Killaz!\n\n'
+                'Используй /start для подписки.',
+                show_alert=True
+            )
+            return
     
     # Обработка проверки подписки
     if query.data == 'check_sub':
