@@ -26,12 +26,20 @@ async def check_subscription(user_id: int, bot) -> bool:
         try:
             member = await bot.get_chat_member(chat_id=channel['username'], user_id=user_id)
             # Проверяем статус подписки
+            # member, creator, administrator - подписан
+            # left, kicked - не подписан
             if member.status in ['left', 'kicked']:
+                print(f"Пользователь {user_id} НЕ подписан на {channel['username']}")
                 return False
+            else:
+                print(f"Пользователь {user_id} подписан на {channel['username']} (статус: {member.status})")
         except Exception as e:
-            print(f"Ошибка проверки подписки на {channel['username']}: {e}")
-            # Если не можем проверить, пропускаем (например, канал приватный или не существует)
-            continue
+            print(f"⚠️ Ошибка проверки подписки на {channel['username']}: {e}")
+            # ВАЖНО: Если канал не найден или бот не админ - пропускаем проверку
+            # Иначе бот не будет работать вообще!
+            print(f"⚠️ Пропускаем проверку канала {channel['username']} из-за ошибки")
+            # Возвращаем True чтобы бот работал даже если канал недоступен для проверки
+            return True
     return True
 
 
@@ -57,8 +65,9 @@ async def show_subscription_request(update: Update, lang: str):
     
     message_text = (
         "╔═══════════════════════════════════╗\n"
-        "║  🤖 Добро пожаловать в Sigma Bot! ║\n"
+        "║  🤖 Sigma Bot v2.7.0              ║\n"
         "╚═══════════════════════════════════╝\n\n"
+        "👋 Привет! Добро пожаловать!\n\n"
         "🔒 Для доступа к функциям бота подпишись на канал:\n\n"
         f"📢 {REQUIRED_CHANNELS[0]['name']}\n"
         f"   {REQUIRED_CHANNELS[0]['username']}\n\n"
@@ -99,7 +108,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
-    welcome_text = get_text(lang, 'welcome')
+    welcome_text = (
+        f"{get_text(lang, 'welcome')}\n\n"
+        f"🤖 Версия: 2.7.0\n"
+        f"📢 Канал: @Mollysantana"
+    )
     
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
